@@ -4,7 +4,7 @@ __pycache__/
 .env
 config/.env
 runtime/logs/*.log
-data/
+/data/
 !data/.gitkeep
 reference/
 .venv/
