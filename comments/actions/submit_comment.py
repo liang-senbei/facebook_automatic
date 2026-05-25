@@ -21,25 +21,33 @@ def submit_comment(driver, wait_after: float = 3.0) -> bool:
         是否发送成功（评论框清空视为成功）
     """
     try:
-        # 点击 "Post comment" 按钮
+        # 点击 "Post comment" 按钮（支持多语言）
         clicked = driver.execute_script("""
-            // 策略1: 精确匹配 aria-label="Post comment"
-            var btn = document.querySelector('[aria-label="Post comment"]');
-            if (btn) {
-                btn.click();
-                return 'post_comment';
+            // 精确匹配各语言的提交按钮
+            var labels = ['Post comment', 'post comment', '发布评论', '发表评论', 'Publicar comentario', 'Commenter', 'Kommentieren'];
+            for (var i = 0; i < labels.length; i++) {
+                var btn = document.querySelector('[aria-label="' + labels[i] + '"]');
+                if (btn) {
+                    var rect = btn.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        btn.click();
+                        return labels[i];
+                    }
+                }
             }
 
-            // 策略2: 模糊匹配
-            var candidates = document.querySelectorAll('[aria-label*="Post"], [aria-label*="post"], [aria-label*="Submit"], [aria-label*="发表"], [aria-label*="发送"]');
-            for (var i = 0; i < candidates.length; i++) {
-                var el = candidates[i];
+            // 模糊匹配
+            var candidates = document.querySelectorAll('[aria-label]');
+            for (var j = 0; j < candidates.length; j++) {
+                var el = candidates[j];
                 var label = (el.getAttribute('aria-label') || '').toLowerCase();
-                if ((label.includes('post') && label.includes('comment')) || label === 'post' || label.includes('submit')) {
-                    var rect = el.getBoundingClientRect();
-                    if (rect.width > 0 && rect.height > 0) {
+                if ((label.includes('post') && label.includes('comment')) ||
+                    label.includes('发布评论') || label.includes('发表评论') ||
+                    (label.includes('submit') && label.includes('comment'))) {
+                    var rect2 = el.getBoundingClientRect();
+                    if (rect2.width > 0 && rect2.height > 0) {
                         el.click();
-                        return 'fallback: ' + el.getAttribute('aria-label');
+                        return el.getAttribute('aria-label');
                     }
                 }
             }
