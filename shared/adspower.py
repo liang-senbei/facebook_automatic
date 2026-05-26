@@ -20,7 +20,7 @@ if not log.handlers:
 
 api_lock = threading.RLock()
 _last_call = [0.0]
-_MIN_INTERVAL = 1.0
+_MIN_INTERVAL = 2.0  # 最小间隔 2 秒（多并发时避免 AdsPower 过载）
 
 
 def _throttle():

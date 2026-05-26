@@ -48,11 +48,18 @@ def execute_comment(
     result = CommentResult(post_url=post_url, comment_text=comment_text)
 
     # Step 1: 导航到帖子
-    if not navigate_to_post(driver, post_url):
+    try:
+        if not navigate_to_post(driver, post_url):
+            result.status = "failed"
+            result.error = "navigate_failed"
+            result.duration_sec = time.time() - start
+            return result
+    except RuntimeError as e:
+        # 浏览器已死，向上传递
         result.status = "failed"
-        result.error = "navigate_failed"
+        result.error = str(e)
         result.duration_sec = time.time() - start
-        return result
+        raise
 
     # Step 2: 检测封禁
     ban = detect_ban(driver)

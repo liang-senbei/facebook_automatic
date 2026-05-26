@@ -36,6 +36,7 @@ def run_session(
     comment_tasks: list[dict],
     session_config: dict | None = None,
     on_comment_done: callable | None = None,
+    stop_event=None,
 ) -> SessionResult:
     """执行单次上线的完整行为链。
 
@@ -79,10 +80,16 @@ def run_session(
     # 阶段 2：评论循环
     total_comments = len(comment_tasks)
     MAX_COMMENT_RETRIES = 3
-    RETRYABLE_ERRORS = ("timeout", "net::ERR_", "connection", "disconnected")
+    RETRYABLE_ERRORS = ("timeout", "net::ERR_", "connection", "disconnected", "navigate_failed", "comment_box_not_found")
     FATAL_DRIVER_ERRORS = ("invalid session", "no such window", "session not created")
 
     for i, task in enumerate(comment_tasks):
+        # 硬超时检查
+        if stop_event and stop_event.is_set():
+            log.warning("session 硬超时，终止剩余评论")
+            result.comments_failed += (total_comments - i)
+            break
+
         # 动态随机动作概率
         progress = (i + 1) / max(total_comments, 1)
         if progress < 0.3:
@@ -95,12 +102,18 @@ def run_session(
         # 执行评论（带重试）
         comment_result = None
         for attempt in range(MAX_COMMENT_RETRIES):
-            comment_result = execute_comment(
-                driver,
-                post_url=task["post_url"],
-                comment_text=task["comment_text"],
-                like_prob=config.LIKE_BEFORE_COMMENT_PROB,
-            )
+            try:
+                comment_result = execute_comment(
+                    driver,
+                    post_url=task["post_url"],
+                    comment_text=task["comment_text"],
+                    like_prob=config.LIKE_BEFORE_COMMENT_PROB,
+                )
+            except RuntimeError:
+                # 浏览器已死，立即终止整个 session
+                result.comments_failed += (total_comments - i)
+                result.duration_min = round((time.time() - start) / 60, 1)
+                return result
 
             if comment_result.status in ("sent", "unverified", "banned"):
                 break
@@ -129,6 +142,15 @@ def run_session(
                 time.sleep(wait)
             except Exception:
                 time.sleep(wait)
+
+        # 防御 None（所有 attempt 都抛出非预期异常时）
+        if comment_result is None:
+            comment_result = CommentResult(
+                post_url=task["post_url"],
+                comment_text=task.get("comment_text", ""),
+                status="failed",
+                error="unexpected_exception",
+            )
 
         result.results.append(comment_result)
 

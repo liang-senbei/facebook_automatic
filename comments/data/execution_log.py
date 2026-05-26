@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import json
 import time
+import threading
 from pathlib import Path
+
+_write_lock = threading.Lock()
 
 
 class ExecutionLog:
-    """JSONL 格式的执行日志（按天轮转）"""
+    """JSONL 格式的执行日志（按天轮转，线程安全）"""
 
     def __init__(self, data_dir: Path):
-        self.data_dir = data_dir
+        self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
     def _log_file(self) -> Path:
@@ -20,8 +23,10 @@ class ExecutionLog:
 
     def append(self, record: dict):
         record.setdefault("timestamp", time.strftime("%Y-%m-%d %H:%M:%S"))
-        with open(self._log_file(), "a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        line = json.dumps(record, ensure_ascii=False) + "\n"
+        with _write_lock:
+            with open(self._log_file(), "a", encoding="utf-8") as f:
+                f.write(line)
 
     def log_comment(self, env_uid: str, post_url: str, status: str,
                     comment_text: str = "", error: str = "", duration: float = 0):

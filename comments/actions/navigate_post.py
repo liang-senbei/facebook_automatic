@@ -7,6 +7,8 @@ import logging
 
 log = logging.getLogger("fb.navigate_post")
 
+FATAL_ERRORS = ("invalid session", "no such window", "session not created", "browser has closed")
+
 
 def navigate_to_post(driver, post_url: str, timeout: int = 30) -> bool:
     """导航到指定的 Facebook 帖子。
@@ -18,10 +20,16 @@ def navigate_to_post(driver, post_url: str, timeout: int = 30) -> bool:
 
     Returns:
         是否成功加载帖子页面
+
+    Raises:
+        RuntimeError: 浏览器已死（invalid session 等），上层应终止该账号
     """
     try:
         driver.get(post_url)
     except Exception as e:
+        err_msg = str(e).lower()
+        if any(kw in err_msg for kw in FATAL_ERRORS):
+            raise RuntimeError(f"浏览器已死: {str(e)[:80]}")
         log.warning(f"导航超时（可能已部分加载）: {e}")
 
     deadline = time.time() + timeout
@@ -32,19 +40,18 @@ def navigate_to_post(driver, post_url: str, timeout: int = 30) -> bool:
                 time.sleep(2)
                 continue
 
-            # 检测页面是否加载了帖子内容
             has_content = driver.execute_script("""
-                // 检测帖子内容区域
                 var post = document.querySelector('[data-pagelet*="FeedUnit"], [role="article"], .x1yztbdb');
                 if (post) return true;
-                // 备用检测：页面文本长度
                 var textLen = (document.body.innerText || '').length;
                 return textLen > 200;
             """)
             if has_content:
                 return True
-        except Exception:
-            pass
+        except Exception as e:
+            err_msg = str(e).lower()
+            if any(kw in err_msg for kw in FATAL_ERRORS):
+                raise RuntimeError(f"浏览器已死: {str(e)[:80]}")
         time.sleep(2)
 
     return False

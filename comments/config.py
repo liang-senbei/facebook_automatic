@@ -5,9 +5,9 @@ DAILY_QUOTA_PER_ACCOUNT = 20
 COMMENTS_PER_SESSION_OPTIONS = [3, 4, 5]
 
 # ==================== 时间控制 ====================
-WARMUP_DURATION_SEC = (60, 180)
-COOLDOWN_DURATION_SEC = (30, 120)
-INTER_COMMENT_WAIT_SEC = (30, 60)
+WARMUP_DURATION_SEC = (20, 45)
+COOLDOWN_DURATION_SEC = (10, 30)
+INTER_COMMENT_WAIT_SEC = (15, 35)
 
 # ==================== 并发 ====================
 MAX_CONCURRENT_BROWSERS = 5
@@ -18,7 +18,7 @@ RANDOM_ACTION_PROB_EARLY = 0.70
 RANDOM_ACTION_PROB_MID = 0.50
 RANDOM_ACTION_PROB_LATE = 0.30
 LIKE_BEFORE_COMMENT_PROB = 0.60
-IDLE_BEFORE_COMMENT_SEC = (5, 15)
+IDLE_BEFORE_COMMENT_SEC = (3, 8)
 
 # ==================== LLM ====================
 COMMENT_LLM_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
